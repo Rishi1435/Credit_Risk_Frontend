@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/dashboard_service.dart';
+import 'result_screen.dart'; // Import ResultScreen to allow navigation
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -17,17 +18,16 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isLoading = true;
   late AnimationController _controller;
 
-  // --- PALETTE (MATCHING FORM SCREEN) ---
-  final Color bgBlack = const Color(0xFF121212); // Deep Black
-  final Color cardGrey = const Color(0xFF1E1E1E); // Dark Grey Cards
-  final Color neonGreen = const Color(0xFF00E676); // Neon Green
-  final Color neonRed = const Color(0xFFFF5252); // Neon Red (From Result Screen)
+  // --- PALETTE ---
+  final Color bgBlack = const Color(0xFF121212);
+  final Color cardGrey = const Color(0xFF1E1E1E);
+  final Color neonGreen = const Color(0xFF00E676);
+  final Color neonRed = const Color(0xFFFF5252);
   final Color textWhite = Colors.white;
 
   @override
   void initState() {
     super.initState();
-    // Setup Animation
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
@@ -36,13 +36,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Future<void> _loadData() async {
+    _controller.reset();
     final data = await _service.fetchDashboardData();
     if (mounted) {
       setState(() {
         _data = data;
         _isLoading = false;
       });
-      _controller.forward(); // Start animation after data loads
+      _controller.forward();
     }
   }
 
@@ -63,6 +64,15 @@ class _DashboardScreenState extends State<DashboardScreen>
             style: GoogleFonts.inter(
                 fontWeight: FontWeight.bold, color: textWhite)),
         actions: [
+          IconButton(
+            icon: Icon(Icons.refresh, color: neonGreen),
+            tooltip: 'Reload Data',
+            onPressed: () {
+              setState(() => _isLoading = true);
+              _loadData();
+            },
+          ),
+          const SizedBox(width: 8),
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: Chip(
@@ -89,13 +99,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _buildAnimatedSection(
                       0, "Portfolio Pulse", Icons.bar_chart_rounded),
                   const SizedBox(height: 15),
-
-                  // --- 1. RESPONSIVE KPI GRID ---
-                  // Uses LayoutBuilder to decide between Horizontal Scroll (Mobile) or Grid (Web)
                   LayoutBuilder(
                     builder: (context, constraints) {
                       if (constraints.maxWidth > 800) {
-                        // Web/Desktop: Grid View
                         return GridView.count(
                           crossAxisCount: 4,
                           shrinkWrap: true,
@@ -106,7 +112,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                           children: _buildKpiList(),
                         );
                       } else {
-                        // Mobile: Horizontal Scroll
                         return SingleChildScrollView(
                           scrollDirection: Axis.horizontal,
                           physics: const BouncingScrollPhysics(),
@@ -123,11 +128,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                       }
                     },
                   ),
-
                   const SizedBox(height: 30),
-
-                  // --- 2. MAIN CHARTS ---
-                  _buildAnimatedSection(1, "Risk Intelligence", Icons.analytics),
+                  _buildAnimatedSection(
+                      1, "Risk Intelligence", Icons.analytics),
                   const SizedBox(height: 15),
                   LayoutBuilder(builder: (context, constraints) {
                     bool isWide = constraints.maxWidth > 800;
@@ -135,58 +138,67 @@ class _DashboardScreenState extends State<DashboardScreen>
                       direction: isWide ? Axis.horizontal : Axis.vertical,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Chart A
                         Expanded(
                           flex: isWide ? 1 : 0,
                           child: _buildChartCard(
                             "Education vs Default",
-                            "High School grads showing stress",
+                            "Portfolio distribution by Education",
                             AspectRatio(
                               aspectRatio: isWide ? 1.5 : 1.3,
                               child: _buildBarChart(),
                             ),
+                            legends: [
+                              _buildLegendItem(neonGreen, "Graduate"),
+                              _buildLegendItem(neonRed, "University"),
+                              _buildLegendItem(Colors.orange, "High School"),
+                              _buildLegendItem(Colors.blue, "Others"),
+                            ],
                           ),
                         ),
                         if (isWide) const SizedBox(width: 20),
                         if (!isWide) const SizedBox(height: 20),
-                        // Chart B
                         Expanded(
                           flex: isWide ? 1 : 0,
                           child: _buildChartCard(
                             "Utilization Density",
-                            "Red Zones = 80%+ Utilization",
+                            "Spending patterns of Safe vs Risky users",
                             AspectRatio(
                               aspectRatio: isWide ? 1.5 : 1.3,
                               child: _buildLineChart(),
                             ),
+                            legends: [
+                              _buildLegendItem(neonGreen, "Safe Users"),
+                              _buildLegendItem(neonRed, "Risky Users"),
+                            ],
                           ),
                         ),
                       ],
                     );
                   }),
-
                   const SizedBox(height: 30),
-
-                  // --- 3. BOTTOM SECTION (Donut + Live Feed) ---
                   LayoutBuilder(builder: (context, constraints) {
                     bool isWide = constraints.maxWidth > 800;
                     return Flex(
                       direction: isWide ? Axis.horizontal : Axis.vertical,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Donut Chart
                         Container(
                           width: isWide ? 350 : double.infinity,
                           margin: EdgeInsets.only(bottom: isWide ? 0 : 20),
                           child: _buildChartCard(
                             "Payment Status",
-                            "Current active portfolio",
+                            "Current active portfolio health",
                             AspectRatio(
                                 aspectRatio: 1.2, child: _buildPieChart()),
+                            legends: [
+                              _buildLegendItem(neonGreen, "Paid On-Time"),
+                              _buildLegendItem(
+                                  Colors.blueAccent, "Active"),
+                              _buildLegendItem(neonRed, "Delinquent"),
+                            ],
                           ),
                         ),
                         if (isWide) const SizedBox(width: 20),
-                        // Live Feed
                         Expanded(
                           flex: isWide ? 1 : 0,
                           child: _buildLiveFeedCard(),
@@ -201,7 +213,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- 1. WIDGET BUILDERS: ANIMATIONS ---
+  // --- WIDGET BUILDERS ---
+
   Widget _buildAnimatedSection(int index, String title, IconData icon) {
     return SlideTransition(
       position: Tween<Offset>(begin: const Offset(-0.2, 0), end: Offset.zero)
@@ -226,16 +239,42 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- 2. WIDGET BUILDERS: CARDS ---
   List<Widget> _buildKpiList() {
+    final kpi = _data?['kpi'] ?? {};
+    double exposure = (kpi['exposure'] ?? 0).toDouble();
+    double riskScore = (kpi['risk_score'] ?? 0).toDouble();
+    double avgLimit = (kpi['avg_limit'] ?? 0).toDouble();
+    double delinquency = (kpi['delinquency'] ?? 0).toDouble();
+
     return [
-      _buildKpiCard("Exposure", "NT\$ 1.54B", "+2.4%",
-          Icons.account_balance_wallet, false),
-      _buildKpiCard("Risk Score", "22.1%", "+1.2%", Icons.warning, true),
       _buildKpiCard(
-          "Avg Limit", "NT\$ 167k", "-0.5%", Icons.credit_card, false),
+        "Exposure",
+        _formatLargeNumber(exposure),
+        "Total",
+        Icons.account_balance_wallet,
+        false,
+      ),
       _buildKpiCard(
-          "Delinquency", "14.5%", "+0.8%", Icons.trending_down, true),
+        "Risk Score",
+        "${riskScore.toStringAsFixed(1)}%",
+        riskScore > 15 ? "High" : "Low",
+        Icons.warning,
+        riskScore > 15,
+      ),
+      _buildKpiCard(
+        "Avg Limit",
+        _formatLargeNumber(avgLimit),
+        "Per User",
+        Icons.credit_card,
+        false,
+      ),
+      _buildKpiCard(
+        "Delinquency",
+        "${delinquency.toStringAsFixed(1)}%",
+        "Late Pays",
+        Icons.trending_down,
+        true,
+      ),
     ];
   }
 
@@ -287,7 +326,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  Widget _buildChartCard(String title, String subtitle, Widget chart) {
+  Widget _buildChartCard(String title, String subtitle, Widget chart,
+      {List<Widget>? legends}) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -305,8 +345,36 @@ class _DashboardScreenState extends State<DashboardScreen>
               style: GoogleFonts.inter(color: Colors.grey[500], fontSize: 12)),
           const SizedBox(height: 24),
           chart,
+          if (legends != null) ...[
+            const SizedBox(height: 20),
+            Divider(color: Colors.white.withValues(alpha: 0.05)),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 15,
+              runSpacing: 10,
+              children: legends,
+            )
+          ]
         ],
       ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.inter(color: Colors.grey[400], fontSize: 11),
+        ),
+      ],
     );
   }
 
@@ -334,6 +402,9 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           const SizedBox(height: 15),
+          if (feed.isEmpty)
+             const Text("No recent data", style: TextStyle(color: Colors.grey)),
+
           ListView.separated(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -343,26 +414,57 @@ class _DashboardScreenState extends State<DashboardScreen>
             itemBuilder: (context, index) {
               final item = feed[index];
               bool isHighRisk = item['risk'] == 'High';
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: CircleAvatar(
-                  backgroundColor: isHighRisk
-                      ? neonRed.withValues(alpha: 0.1)
-                      : neonGreen.withValues(alpha: 0.1),
-                  child: Icon(
-                    isHighRisk ? Icons.priority_high : Icons.check,
-                    color: isHighRisk ? neonRed : neonGreen,
-                    size: 16,
+              
+              // --- INTERACTIVITY: CLICK TO VIEW RESULT ---
+              return InkWell(
+                onTap: () {
+                  // 1. Get the raw MongoDB data we stored in the service
+                  final raw = item['raw'] ?? {};
+                  
+                  // 2. Map flat MongoDB structure to ResultScreen structure
+                  final resultData = {
+                    'risk_assessment': raw['risk_prediction'] ?? "Default",
+                    'confidence_score': (raw['confidence_score'] ?? 0.0),
+                    'input_received': {
+                      'demographics': {
+                        'LIMIT_BAL': raw['LIMIT_BAL']
+                      },
+                      'financials': {
+                        'BILL_AMT1': raw['BILL_AMT1'],
+                        'PAY_AMT1': raw['PAY_AMT1'],
+                      }
+                    }
+                  };
+                  
+                  // 3. Navigate
+                  Navigator.push(
+                    context, 
+                    MaterialPageRoute(
+                      builder: (context) => ResultScreen(data: resultData)
+                    )
+                  );
+                },
+                child: ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: isHighRisk
+                        ? neonRed.withValues(alpha: 0.1)
+                        : neonGreen.withValues(alpha: 0.1),
+                    child: Icon(
+                      isHighRisk ? Icons.priority_high : Icons.check,
+                      color: isHighRisk ? neonRed : neonGreen,
+                      size: 16,
+                    ),
                   ),
+                  title: Text(item['id'],
+                      style: GoogleFonts.inter(
+                          color: textWhite, fontWeight: FontWeight.w600)),
+                  subtitle: Text("Confidence: ${item['prob']}%",
+                      style: GoogleFonts.inter(color: Colors.grey, fontSize: 12)),
+                  trailing: Text(item['time'],
+                      style: GoogleFonts.inter(
+                          color: Colors.grey[600], fontSize: 11)),
                 ),
-                title: Text(item['id'],
-                    style: GoogleFonts.inter(
-                        color: textWhite, fontWeight: FontWeight.w600)),
-                subtitle: Text("Confidence: ${item['prob']}%",
-                    style: GoogleFonts.inter(color: Colors.grey, fontSize: 12)),
-                trailing: Text(item['time'],
-                    style: GoogleFonts.inter(
-                        color: Colors.grey[600], fontSize: 11)),
               );
             },
           )
@@ -371,13 +473,21 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- 3. CHARTS IMPLEMENTATION (Professional) ---
+  // --- CHARTS IMPLEMENTATION ---
 
   Widget _buildBarChart() {
+    final demos = _data?['demographics'] as List<dynamic>? ?? [];
+
+    double getValue(String label) {
+      final item = demos.firstWhere((e) => e['label'] == label, orElse: () => {'value': 0});
+      return (item['value'] as int).toDouble();
+    }
+
     return BarChart(
       BarChartData(
         barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(getTooltipColor: (_) => cardGrey)),
+            touchTooltipData:
+                BarTouchTooltipData(getTooltipColor: (_) => cardGrey)),
         titlesData: FlTitlesData(
           rightTitles:
               const AxisTitles(sideTitles: SideTitles(showTitles: false)),
@@ -399,11 +509,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                   case 3: text = 'Oth'; break;
                   default: text = '';
                 }
-                return SideTitleWidget(meta: meta, child: Text(text, style: style));
+                return SideTitleWidget(
+                    meta: meta, child: Text(text, style: style));
               },
             ),
           ),
-          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          leftTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         gridData: FlGridData(
@@ -412,10 +524,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             getDrawingHorizontalLine: (value) => FlLine(
                 color: Colors.white.withValues(alpha: 0.05), strokeWidth: 1)),
         barGroups: [
-          _makeBarGroup(0, 12, neonGreen),
-          _makeBarGroup(1, 45, neonRed),
-          _makeBarGroup(2, 38, neonRed),
-          _makeBarGroup(3, 5, Colors.blue),
+          _makeBarGroup(0, getValue("Grad"), neonGreen),
+          _makeBarGroup(1, getValue("Uni"), neonRed),
+          _makeBarGroup(2, getValue("HS"), Colors.orange),
+          _makeBarGroup(3, getValue("Other"), Colors.blue),
         ],
       ),
     );
@@ -429,23 +541,32 @@ class _DashboardScreenState extends State<DashboardScreen>
         width: 16,
         borderRadius: BorderRadius.circular(4),
         backDrawRodData: BackgroundBarChartRodData(
-            show: true, toY: 50, color: Colors.black.withValues(alpha: 0.2)),
+            show: true, toY: 100, color: Colors.black.withValues(alpha: 0.2)),
       )
     ]);
   }
 
   Widget _buildLineChart() {
+    final util = _data?['utilization'] ?? {};
+    final List<dynamic> safeList = util['safe'] ?? [];
+    final List<dynamic> riskyList = util['risky'] ?? [];
+
+    List<FlSpot> toSpots(List<dynamic> list) {
+      return list.asMap().entries.map((e) {
+        return FlSpot(e.key.toDouble(), (e.value.toDouble() * 10));
+      }).toList();
+    }
+
     return LineChart(
       LineChartData(
         gridData: const FlGridData(show: false),
         titlesData: const FlTitlesData(show: false),
         borderData: FlBorderData(show: false),
         lineBarsData: [
-          // RED LINE (Risky)
           LineChartBarData(
-            spots: const [
-              FlSpot(0, 1), FlSpot(2, 4), FlSpot(4, 8), FlSpot(6, 6), FlSpot(8, 9)
-            ],
+            spots: toSpots(riskyList).isEmpty 
+              ? [const FlSpot(0, 0)] 
+              : toSpots(riskyList),
             isCurved: true,
             color: neonRed,
             barWidth: 3,
@@ -463,11 +584,10 @@ class _DashboardScreenState extends State<DashboardScreen>
               ),
             ),
           ),
-          // GREEN LINE (Safe)
           LineChartBarData(
-            spots: const [
-              FlSpot(0, 5), FlSpot(2, 6), FlSpot(4, 3), FlSpot(6, 2), FlSpot(8, 1)
-            ],
+            spots: toSpots(safeList).isEmpty 
+              ? [const FlSpot(0, 0)] 
+              : toSpots(safeList),
             isCurved: true,
             color: neonGreen,
             barWidth: 3,
@@ -491,35 +611,58 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildPieChart() {
+    final kpi = _data?['kpi'] ?? {};
+    double delinquency = (kpi['delinquency'] ?? 0).toDouble();
+    double riskScore = (kpi['risk_score'] ?? 0).toDouble();
+    
+    double goodPortion = 100 - (delinquency + riskScore);
+    if(goodPortion < 0) goodPortion = 0;
+
     return PieChart(
       PieChartData(
         sectionsSpace: 4,
-        centerSpaceRadius: 40, // Makes it a Donut
+        centerSpaceRadius: 40,
         startDegreeOffset: 180,
         sections: [
           PieChartSectionData(
             color: neonGreen,
-            value: 40,
-            title: '40%',
+            value: goodPortion,
+            title: '${goodPortion.toInt()}%',
             radius: 20,
-            titleStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
+            titleStyle: GoogleFonts.inter(
+                fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
           ),
           PieChartSectionData(
             color: Colors.blueAccent,
-            value: 35,
-            title: '35%',
+            value: riskScore,
+            title: '${riskScore.toInt()}%',
             radius: 20,
-            titleStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
+            titleStyle: GoogleFonts.inter(
+                fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
           ),
           PieChartSectionData(
             color: neonRed,
-            value: 25,
-            title: '25%',
-            radius: 25, // Slightly pop out the bad one
-            titleStyle: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
+            value: delinquency,
+            title: '${delinquency.toInt()}%',
+            radius: 25,
+            titleStyle: GoogleFonts.inter(
+                fontWeight: FontWeight.bold, fontSize: 10, color: textWhite),
           ),
         ],
       ),
     );
+  }
+
+  String _formatLargeNumber(double num) {
+    if (num >= 1000000000) {
+      return "\$${(num / 1000000000).toStringAsFixed(2)}B";
+    }
+    if (num >= 1000000) {
+      return "\$${(num / 1000000).toStringAsFixed(2)}M";
+    }
+    if (num >= 1000) {
+      return "\$${(num / 1000).toStringAsFixed(0)}K";
+    }
+    return "\$${num.toInt()}";
   }
 }

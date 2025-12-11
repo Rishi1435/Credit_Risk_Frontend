@@ -45,7 +45,7 @@ class _ResultScreenState extends State<ResultScreen>
     // LOGIC FIX: 
     // If score > 0.5 (50%), it is High Risk. 
     // If score <= 0.5 (50%), it is Safe.
-    final bool isSafe = rawScore >= 0.5;
+    final bool isSafe = rawScore <= 0.5;
     
     // The gauge simply shows the raw probability
     final double confidence = rawScore;
