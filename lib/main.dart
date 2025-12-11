@@ -5,11 +5,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/auth_screen.dart';
 
 void main() {
-  if (kIsWeb) {
-    runApp(DevicePreview(builder: (context) => const LoanApp()));
-  } else {
+  // if (kIsWeb) {
+  //   runApp(DevicePreview(builder: (context) => const LoanApp()));
+  // } else {
+  //   runApp(const LoanApp());
+  // }
     runApp(const LoanApp());
-  }
+
 }
 
 class LoanApp extends StatelessWidget {
